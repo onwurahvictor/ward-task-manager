@@ -112,6 +112,22 @@
 
   <div class="container">
 
+    <!-- Task Stats Bar -->
+    <div style="display:flex; gap:12px; margin-bottom:24px; flex-wrap:wrap;">
+    <div class="stat-card" style="background:white; border-radius:8px; padding:16px 24px; flex:1; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.08); border-top: 4px solid #ffb81c;">
+        <div style="font-size:2rem; font-weight:bold;" id="countPending">0</div>
+        <div style="color:#666; font-size:0.9rem;">Pending</div>
+    </div>
+    <div class="stat-card" style="background:white; border-radius:8px; padding:16px 24px; flex:1; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.08); border-top: 4px solid #005eb8;">
+        <div style="font-size:2rem; font-weight:bold;" id="countInProgress">0</div>
+        <div style="color:#666; font-size:0.9rem;">In Progress</div>
+    </div>
+    <div class="stat-card" style="background:white; border-radius:8px; padding:16px 24px; flex:1; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.08); border-top: 4px solid #007f3b;">
+        <div style="font-size:2rem; font-weight:bold;" id="countCompleted">0</div>
+        <div style="color:#666; font-size:0.9rem;">Completed</div>
+    </div>
+    </div>
+
     <!-- Add Task Form -->
     <div class="form-card">
       <h2>Add New Task</h2>
@@ -128,7 +144,27 @@
       </div>
       <button type="submit" id="addTaskBtn">Add Task</button>
     </div>
-
+    <!-- Filter Bar -->
+    <div class="form-card" style="padding:16px;">
+        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            <select id="filterPriority">
+                <option value="all">All Priorities</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+            </select>
+            <select id="filterStatus">
+                <option value="all">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="in-progress">In Progress</option>
+                <option value="completed">Completed</option>
+            </select>
+            <input type="text" id="filterWard" placeholder="Filter by ward..." style="max-width:200px;">
+            <button id="clearFilters" style="background:#666; color:white; border:none; padding:10px 16px; border-radius:4px; cursor:pointer;">
+            Clear Filters
+            </button>
+        </div>
+    </div>
     <!-- Task List -->
     <div class="tasks-section">
       <h2>Current Tasks</h2>
@@ -154,6 +190,7 @@
         method: 'GET',
         success: function(tasks) {
           $('#loading').hide();
+          updateStats(tasks); 
           $('#taskList').empty();
 
           if (tasks.length === 0) {
@@ -164,16 +201,20 @@
           // Loop through each task and build a card
           tasks.forEach(function(task) {
             const card = `
-             <div class="task-card ${task.priority}" id="task-${task.id}">
-                <div class="task-header">
-                    <span class="task-title">${task.title}</span>
-                    <span class="badge ${task.priority}">${task.priority}</span>
-                </div>
-                <div class="task-meta">
+             <div class="task-card ${task.priority}" 
+                id="task-${task.id}"
+                data-priority="${task.priority}"
+                data-status="${task.status}"
+                data-ward="${(task.ward || '').toLowerCase()}">
+               <div class="task-header">
+                  <span class="task-title">${task.title}</span>
+                  <span class="badge ${task.priority}">${task.priority}</span>
+               </div>
+               <div class="task-meta">
                   👤 ${task.assigned_to || 'Unassigned'} &nbsp;|&nbsp;
                   🏥 ${task.ward || 'No ward'} &nbsp;|&nbsp;
                   🕐 ${new Date(task.created_at).toLocaleString()}
-                </div>
+               </div>
                 <div class="task-description">${task.description || ''}</div>
                 <div class="task-actions" style="margin-top:12px; display:flex; gap:8px;">
                     <select class="status-select" data-id="${task.id}">
@@ -186,7 +227,7 @@
                     </button>
                 </div>
              </div>
-  `;
+           `;
             $('#taskList').append(card);
           });
         },
@@ -194,6 +235,23 @@
           $('#loading').text('Failed to load tasks. Is the server running?');
         }
       });
+    }
+
+    // ==========================================
+    // JQUERY - Update task stats counter
+    // Counts tasks by status and updates the
+    // stats bar at the top of the page
+    // ==========================================
+    function updateStats(tasks) {
+    // Use jQuery grep to filter arrays
+    const pending = $.grep(tasks, t => t.status === 'pending').length;
+    const inProgress = $.grep(tasks, t => t.status === 'in-progress').length;
+    const completed = $.grep(tasks, t => t.status === 'completed').length;
+
+    // Update the counter elements
+    $('#countPending').text(pending);
+    $('#countInProgress').text(inProgress);
+    $('#countCompleted').text(completed);
     }
 
     // ==========================================
@@ -281,6 +339,46 @@ $(document).on('click', '.delete-btn', function() {
       alert('Failed to delete task');
     }
   });
+});
+
+// ==========================================
+// JQUERY - Client-side filtering
+// Filters already-loaded cards without
+// making a new request to the server
+// ==========================================
+function applyFilters() {
+  const priority = $('#filterPriority').val();
+  const status = $('#filterStatus').val();
+  const ward = $('#filterWard').val().toLowerCase().trim();
+
+  // Loop through each task card and show/hide based on filters
+  $('.task-card').each(function() {
+    const card = $(this);
+    const cardPriority = card.data('priority');
+    const cardStatus = card.data('status');
+    const cardWard = card.data('ward');
+
+    const priorityMatch = priority === 'all' || cardPriority === priority;
+    const statusMatch = status === 'all' || cardStatus === status;
+    const wardMatch = ward === '' || cardWard.includes(ward);
+
+    if (priorityMatch && statusMatch && wardMatch) {
+      card.show();
+    } else {
+      card.hide();
+    }
+  });
+}
+
+// Run filters when any filter changes
+$('#filterPriority, #filterStatus').on('change', applyFilters);
+$('#filterWard').on('keyup', applyFilters);
+
+// Clear all filters
+$('#clearFilters').on('click', function() {
+  $('#filterPriority, #filterStatus').val('all');
+  $('#filterWard').val('');
+  $('.task-card').show();
 });
     // Load tasks when page first opens
     loadTasks();
