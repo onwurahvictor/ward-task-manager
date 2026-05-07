@@ -42,4 +42,50 @@ router.post('/', async (req, res) => {
   }
 });
 
+// PATCH - Update task status
+// PATCH is used when updating only part of a record (not the whole thing)
+router.patch('/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const result = await pool.query(
+      `UPDATE tasks SET status = $1 WHERE id = $2 RETURNING *`,
+      [status, id]
+    );
+
+    // If no rows returned, task wasn't found
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error updating task status:', err.message);
+    res.status(500).json({ error: 'Failed to update task status' });
+  }
+});
+
+// DELETE - Remove a task
+router.delete('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `DELETE FROM tasks WHERE id = $1 RETURNING *`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+    res.json({ message: 'Task deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting task:', err.message);
+    res.status(500).json({ error: 'Failed to delete task' });
+  }
+});
+
+
 export default router;
