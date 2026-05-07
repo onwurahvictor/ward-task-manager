@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ward Task Manager</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f4f8;
+      color: #333;
+    }
+
+    header {
+      background: #005eb8; /* NHS Blue */
+      color: white;
+      padding: 16px 24px;
+    }
+
+    header h1 { font-size: 1.5rem; }
+    header p { font-size: 0.9rem; opacity: 0.85; }
+
+    .container { max-width: 900px; margin: 30px auto; padding: 0 16px; }
+
+    /* Add Task Form */
+    .form-card {
+      background: white;
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+
+    .form-card h2 { margin-bottom: 16px; color: #005eb8; }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .form-grid .full-width { grid-column: 1 / -1; }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 0.95rem;
+    }
+
+    textarea { resize: vertical; min-height: 80px; }
+
+    button[type="submit"] {
+      margin-top: 12px;
+      background: #005eb8;
+      color: white;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+
+    button[type="submit"]:hover { background: #004a93; }
+
+    /* Task Cards */
+    .tasks-section h2 { margin-bottom: 16px; color: #005eb8; }
+
+    .task-card {
+      background: white;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      border-left: 5px solid #ccc;
+    }
+
+    .task-card.high { border-left-color: #d5281b; }
+    .task-card.medium { border-left-color: #ffb81c; }
+    .task-card.low { border-left-color: #007f3b; }
+
+    .task-header { display: flex; justify-content: space-between; align-items: center; }
+    .task-title { font-size: 1.1rem; font-weight: bold; }
+
+    .badge {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+
+    .badge.high { background: #fde8e8; color: #d5281b; }
+    .badge.medium { background: #fff4d6; color: #b8860b; }
+    .badge.low { background: #e8f5ee; color: #007f3b; }
+
+    .task-meta { font-size: 0.85rem; color: #666; margin-top: 6px; }
+    .task-description { margin-top: 8px; font-size: 0.95rem; }
+
+    #loading { text-align: center; color: #666; padding: 20px; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>🏥 Ward Task Manager</h1>
+    <p>Manage and track ward tasks efficiently</p>
+  </header>
+
+  <div class="container">
+
+    <!-- Add Task Form -->
+    <div class="form-card">
+      <h2>Add New Task</h2>
+      <div class="form-grid">
+        <input type="text" id="title" placeholder="Task title *" required>
+        <input type="text" id="assigned_to" placeholder="Assigned to">
+        <input type="text" id="ward" placeholder="Ward (e.g. Ward A)">
+        <select id="priority">
+          <option value="low">Low Priority</option>
+          <option value="medium" selected>Medium Priority</option>
+          <option value="high">High Priority</option>
+        </select>
+        <textarea id="description" class="full-width" placeholder="Task description"></textarea>
+      </div>
+      <button type="submit" id="addTaskBtn">Add Task</button>
+    </div>
+
+    <!-- Task List -->
+    <div class="tasks-section">
+      <h2>Current Tasks</h2>
+      <div id="loading">Loading tasks...</div>
+      <div id="taskList"></div>
+    </div>
+
+  </div>
+
+  <!-- jQuery CDN -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+  <script>
+    // ==========================================
+    // JQUERY - Fetch and display all tasks
+    // ==========================================
+
+    // This function calls our GET /api/tasks endpoint
+    // and renders each task as a card on the page
+    function loadTasks() {
+      $.ajax({
+        url: '/api/tasks',
+        method: 'GET',
+        success: function(tasks) {
+          $('#loading').hide();
+          $('#taskList').empty();
+
+          if (tasks.length === 0) {
+            $('#taskList').html('<p style="color:#666">No tasks yet. Add one above.</p>');
+            return;
+          }
+
+          // Loop through each task and build a card
+          tasks.forEach(function(task) {
+            const card = `
+              <div class="task-card ${task.priority}">
+                <div class="task-header">
+                  <span class="task-title">${task.title}</span>
+                  <span class="badge ${task.priority}">${task.priority}</span>
+                </div>
+                <div class="task-meta">
+                  👤 ${task.assigned_to || 'Unassigned'} &nbsp;|&nbsp;
+                  🏥 ${task.ward || 'No ward'} &nbsp;|&nbsp;
+                  🕐 ${new Date(task.created_at).toLocaleString()}
+                </div>
+                <div class="task-description">${task.description || ''}</div>
+              </div>
+            `;
+            $('#taskList').append(card);
+          });
+        },
+        error: function() {
+          $('#loading').text('Failed to load tasks. Is the server running?');
+        }
+      });
+    }
+
+    // ==========================================
+    // JQUERY - Handle Add Task form submission
+    // ==========================================
+
+    $('#addTaskBtn').on('click', function() {
+      const title = $('#title').val().trim();
+
+      // Basic validation
+      if (!title) {
+        alert('Task title is required');
+        return;
+      }
+
+      // Build the task object from form values
+      const newTask = {
+        title: title,
+        description: $('#description').val().trim(),
+        assigned_to: $('#assigned_to').val().trim(),
+        ward: $('#ward').val().trim(),
+        priority: $('#priority').val()
+      };
+
+      // POST the new task to our API
+      $.ajax({
+        url: '/api/tasks',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(newTask),
+        success: function(createdTask) {
+          // Clear the form
+          $('#title, #description, #assigned_to, #ward').val('');
+          $('#priority').val('medium');
+
+          // Reload the task list to show the new task
+          loadTasks();
+        },
+        error: function() {
+          alert('Failed to create task. Please try again.');
+        }
+      });
+    });
+
+    // Load tasks when page first opens
+    loadTasks();
+  </script>
+
+</body>
+</html>
