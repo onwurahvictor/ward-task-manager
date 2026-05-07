@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import pool from './db.js';
+import taskRoutes from './routes/tasks.js';
 
 const app = express();
 
@@ -9,6 +10,7 @@ app.use(express.json());
 
 // Serve static files (HTML, CSS, JS) from the public folder
 app.use(express.static('public'));
+app.use('/api/tasks', taskRoutes);
 
 // Basic test route
 app.get('/api/test', (req, res) => {
