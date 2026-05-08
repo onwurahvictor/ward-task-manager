@@ -3,20 +3,28 @@ import 'dotenv/config';
 
 const { Pool } = pg;
 
-const pool = process.env.DATABASE_URL
-  ? new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false }
-    })
-  : new Pool({
-      user: process.env.DB_USER,
-      host: process.env.DB_HOST,
-      database: process.env.DB_NAME,
-      password: process.env.DB_PASSWORD,
-      port: process.env.DB_PORT,
-    });
+let poolConfig;
 
-// Auto-create tables if they don't exist
+if (process.env.DATABASE_URL) {
+  poolConfig = {
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+      rejectUnauthorized: false,
+      require: true
+    }
+  };
+} else {
+  poolConfig = {
+    user: process.env.DB_USER,
+    host: process.env.DB_HOST,
+    database: process.env.DB_NAME,
+    password: process.env.DB_PASSWORD,
+    port: process.env.DB_PORT,
+  };
+}
+
+const pool = new Pool(poolConfig);
+
 const initDB = async () => {
   try {
     await pool.query(`
@@ -29,7 +37,6 @@ const initDB = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-
     await pool.query(`
       CREATE TABLE IF NOT EXISTS tasks (
         id SERIAL PRIMARY KEY,
@@ -42,20 +49,18 @@ const initDB = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-
     console.log('Database tables ready');
   } catch (err) {
-    console.error('Error initialising database:', err.message);
+    console.error('Migration error:', err.message);
   }
 };
 
-// Connect and initialise
 const connectWithRetry = (retries = 5) => {
   pool.connect((err, client, release) => {
     if (err) {
-      console.error('Database connection error:', err.message);
+      console.error('Database connection error:', err.message, err.code);
       if (retries > 0) {
-        console.log(`Retrying connection... ${retries} attempts left`);
+        console.log(`Retrying in 3s... ${retries} attempts left`);
         setTimeout(() => connectWithRetry(retries - 1), 3000);
       }
     } else {
