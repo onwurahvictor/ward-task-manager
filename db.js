@@ -6,12 +6,10 @@ const { Pool } = pg;
 let poolConfig;
 
 if (process.env.DATABASE_URL) {
+  // Railway internal connection - no SSL needed for internal network
   poolConfig = {
     connectionString: process.env.DATABASE_URL,
-    ssl: {
-      rejectUnauthorized: false,
-      require: true
-    }
+    ssl: false
   };
 } else {
   poolConfig = {
