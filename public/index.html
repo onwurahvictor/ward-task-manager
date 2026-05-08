@@ -160,6 +160,7 @@
                 <option value="completed">Completed</option>
             </select>
             <input type="text" id="filterWard" placeholder="Filter by ward..." style="max-width:200px;">
+            <input type="text" id="searchTitle" placeholder="Search by title..." style="max-width:200px;">
             <button id="clearFilters" style="background:#666; color:white; border:none; padding:10px 16px; border-radius:4px; cursor:pointer;">
             Clear Filters
             </button>
@@ -201,11 +202,7 @@
           // Loop through each task and build a card
           tasks.forEach(function(task) {
             const card = `
-             <div class="task-card ${task.priority}" 
-                id="task-${task.id}"
-                data-priority="${task.priority}"
-                data-status="${task.status}"
-                data-ward="${(task.ward || '').toLowerCase()}">
+             <div class="task-card ${task.priority}" id="task-${task.id}" data-priority="${task.priority}" data-status="${task.status}" data-ward="${(task.ward || '').toLowerCase()}" data-title="${task.title.toLowerCase()}">
                <div class="task-header">
                   <span class="task-title">${task.title}</span>
                   <span class="badge ${task.priority}">${task.priority}</span>
@@ -350,6 +347,7 @@ function applyFilters() {
   const priority = $('#filterPriority').val();
   const status = $('#filterStatus').val();
   const ward = $('#filterWard').val().toLowerCase().trim();
+  const search = $('#searchTitle').val().toLowerCase().trim();
 
   // Loop through each task card and show/hide based on filters
   $('.task-card').each(function() {
@@ -357,12 +355,15 @@ function applyFilters() {
     const cardPriority = card.data('priority');
     const cardStatus = card.data('status');
     const cardWard = card.data('ward');
+    const cardTitle = card.data('title');
+    console.log('cardTitle:', cardTitle, 'search:', search);
 
     const priorityMatch = priority === 'all' || cardPriority === priority;
     const statusMatch = status === 'all' || cardStatus === status;
     const wardMatch = ward === '' || cardWard.includes(ward);
+    const searchMatch = search === '' || cardTitle.includes(search);
 
-    if (priorityMatch && statusMatch && wardMatch) {
+    if (priorityMatch && statusMatch && wardMatch && searchMatch) {
       card.show();
     } else {
       card.hide();
@@ -373,11 +374,12 @@ function applyFilters() {
 // Run filters when any filter changes
 $('#filterPriority, #filterStatus').on('change', applyFilters);
 $('#filterWard').on('keyup', applyFilters);
+$('#searchTitle').on('keyup', applyFilters);
 
 // Clear all filters
 $('#clearFilters').on('click', function() {
   $('#filterPriority, #filterStatus').val('all');
-  $('#filterWard').val('');
+  $('#filterWard, #searchTitle').val('');
   $('.task-card').show();
 });
     // Load tasks when page first opens
