@@ -106,8 +106,18 @@
 <body>
 
   <header>
-    <h1>🏥 Ward Task Manager</h1>
-    <p>Manage and track ward tasks efficiently</p>
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+            <h1>🏥 Ward Task Manager</h1>
+            <p>Manage and track ward tasks efficiently</p>
+        </div>
+        <div style="text-align:right;">
+            <div id="userInfo" style="font-size:0.9rem; margin-bottom:6px;"></div>
+            <button id="logoutBtn" style="background:white; color:#005eb8; border:none; padding:6px 16px; border-radius:4px; cursor:pointer; font-weight:bold;">
+                Logout
+            </button>
+        </div>
+    </div>
   </header>
 
   <div class="container">
@@ -202,6 +212,18 @@
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
   <script>
+  // Check if user is logged in
+  // If not, redirect to login page
+    const token = localStorage.getItem('token');
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+    if (!token) {
+        window.location.href = '/login.html';
+    }
+  </script>
+
+
+  <script>
     // ==========================================
     // JQUERY - Fetch and display all tasks
     // ==========================================
@@ -212,6 +234,9 @@
       $.ajax({
         url: '/api/tasks',
         method: 'GET',
+        headers: {
+            'Authorization': 'Bearer ' + localStorage.getItem('token')
+        },
         success: function(tasks) {
           $('#loading').hide();
           updateStats(tasks); 
@@ -310,6 +335,9 @@
       $.ajax({
         url: '/api/tasks',
         method: 'POST',
+        headers: {
+            'Authorization': 'Bearer ' + localStorage.getItem('token')
+        },
         contentType: 'application/json',
         data: JSON.stringify(newTask),
         success: function(createdTask) {
@@ -337,6 +365,9 @@ $(document).on('change', '.status-select', function() {
   $.ajax({
     url: `/api/tasks/${id}/status`,
     method: 'PATCH',
+    headers: {
+        'Authorization': 'Bearer ' + localStorage.getItem('token')
+    },
     contentType: 'application/json',
     data: JSON.stringify({ status }),
     success: function() {
@@ -359,6 +390,9 @@ $(document).on('click', '.delete-btn', function() {
   $.ajax({
     url: `/api/tasks/${id}`,
     method: 'DELETE',
+    headers: {
+        'Authorization': 'Bearer ' + localStorage.getItem('token')
+    },
     success: function() {
       // Remove the card from the page without reloading
       $(`#task-${id}`).fadeOut(300, function() {
@@ -469,6 +503,9 @@ $('#saveEditBtn').on('click', function() {
   $.ajax({
     url: `/api/tasks/${id}`,
     method: 'PUT',
+    headers: {
+        'Authorization': 'Bearer ' + localStorage.getItem('token')
+    },
     contentType: 'application/json',
     data: JSON.stringify(updatedTask),
     success: function() {
@@ -480,6 +517,17 @@ $('#saveEditBtn').on('click', function() {
     }
   });
 });
+
+// Show logged in user info
+    const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+    $('#userInfo').text(`👤 ${storedUser.name || 'Staff'} (${storedUser.role || 'staff'})`);
+
+    // Handle logout
+    $('#logoutBtn').on('click', function() {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login.html';
+    });
 
     // Load tasks when page first opens
     loadTasks();
