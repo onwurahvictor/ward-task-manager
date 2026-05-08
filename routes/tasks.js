@@ -87,5 +87,29 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// PUT - Update an entire task
+router.put('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, assigned_to, ward, priority } = req.body;
+
+    const result = await pool.query(
+      `UPDATE tasks 
+       SET title = $1, description = $2, assigned_to = $3, ward = $4, priority = $5
+       WHERE id = $6
+       RETURNING *`,
+      [title, description, assigned_to, ward, priority, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error updating task:', err.message);
+    res.status(500).json({ error: 'Failed to update task' });
+  }
+});
 
 export default router;

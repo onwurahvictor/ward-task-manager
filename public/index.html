@@ -175,6 +175,29 @@
 
   </div>
 
+<!-- Edit Task Modal -->
+<div id="editModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000;">
+  <div style="background:white; border-radius:8px; padding:24px; max-width:500px; margin:80px auto; position:relative;">
+    <h2 style="color:#005eb8; margin-bottom:16px;">Edit Task</h2>
+    <input type="hidden" id="editId">
+    <div style="display:flex; flex-direction:column; gap:12px;">
+      <input type="text" id="editTitle" placeholder="Task title *">
+      <input type="text" id="editAssignedTo" placeholder="Assigned to">
+      <input type="text" id="editWard" placeholder="Ward">
+      <select id="editPriority">
+        <option value="low">Low Priority</option>
+        <option value="medium">Medium Priority</option>
+        <option value="high">High Priority</option>
+      </select>
+      <textarea id="editDescription" placeholder="Description" style="min-height:80px; resize:vertical;"></textarea>
+    </div>
+    <div style="display:flex; gap:8px; margin-top:16px;">
+      <button id="saveEditBtn" style="background:#005eb8; color:white; border:none; padding:10px 24px; border-radius:4px; cursor:pointer;">Save Changes</button>
+      <button id="cancelEditBtn" style="background:#666; color:white; border:none; padding:10px 24px; border-radius:4px; cursor:pointer;">Cancel</button>
+    </div>
+  </div>
+</div>
+
   <!-- jQuery CDN -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
@@ -219,6 +242,16 @@
                       <option value="in-progress" ${task.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
                       <option value="completed" ${task.status === 'completed' ? 'selected' : ''}>Completed</option>
                     </select>
+                     <button class="edit-btn" 
+                        data-id="${task.id}"
+                        data-title="${task.title}"
+                        data-description="${task.description || ''}"
+                        data-assigned="${task.assigned_to || ''}"
+                        data-ward="${task.ward || ''}"
+                        data-priority="${task.priority}"
+                        style="background:#005eb8; color:white; border:none; padding:6px 14px; border-radius:4px; cursor:pointer;">
+                        Edit
+                    </button>
                     <button class="delete-btn" data-id="${task.id}" style="background:#d5281b; color:white; border:none; padding:6px 14px; border-radius:4px; cursor:pointer;">
                       Delete
                     </button>
@@ -382,9 +415,77 @@ $('#clearFilters').on('click', function() {
   $('#filterWard, #searchTitle').val('');
   $('.task-card').show();
 });
+
+// ==========================================
+// JQUERY - Open edit modal with task data
+// ==========================================
+$(document).on('click', '.edit-btn', function() {
+  const btn = $(this);
+
+  // Pre-fill the modal form with existing task data
+  $('#editId').val(btn.data('id'));
+  $('#editTitle').val(btn.data('title'));
+  $('#editAssignedTo').val(btn.data('assigned'));
+  $('#editWard').val(btn.data('ward'));
+  $('#editPriority').val(btn.data('priority'));
+  $('#editDescription').val(btn.data('description'));
+
+  // Show the modal
+  $('#editModal').show();
+});
+
+// Close modal on cancel
+$('#cancelEditBtn').on('click', function() {
+  $('#editModal').hide();
+});
+
+// Close modal if user clicks outside it
+$('#editModal').on('click', function(e) {
+  if ($(e.target).is('#editModal')) {
+    $('#editModal').hide();
+  }
+});
+
+// ==========================================
+// JQUERY - Save edited task
+// ==========================================
+$('#saveEditBtn').on('click', function() {
+  const id = $('#editId').val();
+  const title = $('#editTitle').val().trim();
+
+  if (!title) {
+    alert('Task title is required');
+    return;
+  }
+
+  const updatedTask = {
+    title: title,
+    description: $('#editDescription').val().trim(),
+    assigned_to: $('#editAssignedTo').val().trim(),
+    ward: $('#editWard').val().trim(),
+    priority: $('#editPriority').val()
+  };
+
+  $.ajax({
+    url: `/api/tasks/${id}`,
+    method: 'PUT',
+    contentType: 'application/json',
+    data: JSON.stringify(updatedTask),
+    success: function() {
+      $('#editModal').hide();
+      loadTasks(); // reload to show updated task
+    },
+    error: function() {
+      alert('Failed to update task. Please try again.');
+    }
+  });
+});
+
     // Load tasks when page first opens
     loadTasks();
   </script>
+
+
 
 </body>
 </html>
